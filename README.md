@@ -328,9 +328,9 @@ Error status summary:
 
 ---
 
-## 6. Tests (encouraged, not required)
+## 6. Tests
 
-Tests are not a formal requirement, but we strongly encourage adding a few **e2e tests** (Jest + `supertest` is the Nest default) — they are a strong signal of engineering quality. Suggested coverage if you add them:
+We strongly encourage adding a few **e2e tests** (Jest + `supertest` is the Nest default) — they are a strong signal of engineering quality. Suggested coverage if you add them:
 
 1. CRUD happy path: create → get by id → list → patch → delete → get returns `404`.
 2. `400` on invalid create body (e.g. negative price) **and** `400` on an unknown field.
