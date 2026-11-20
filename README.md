@@ -12,7 +12,8 @@ Suppliers send us product feeds as XML files. You will build a small **NestJS** 
 - exposes **RESTful CRUD** endpoints,
 - binds request data through **DTOs**,
 - validates input with **class-validator** (global `ValidationPipe`),
-- **imports products from an XML feed**, reporting per-row failures.
+- **imports products from an XML feed**, reporting per-row failures,
+- documents the API with an interactive **Swagger (OpenAPI)** UI.
 
 The database runs locally — either in the provided Postgres container or as a zero-setup SQLite file. A reviewer must be able to clone the repo, follow your `README.md`, and verify every behavior with `curl`.
 
@@ -34,8 +35,9 @@ Commit your finished service to this repo. **You must provide your own `README.m
 | Framework | **NestJS** (latest stable) |
 | Persistence | An ORM/ODM. **Postgres + TypeORM is recommended** — a `docker-compose.yml` is provided so the database starts with one command. **SQLite** (file-based, zero setup) is also acceptable. Prisma, MikroORM, or Mongoose + MongoDB are acceptable **only if** startup stays a documented one-command setup |
 | DTO validation | `class-validator` + `class-transformer` |
+| API docs | **Swagger UI** at `/docs` via `@nestjs/swagger`, with the OpenAPI JSON at `/docs-json` |
 | XML parsing | Any pure-JS parser (e.g. `fast-xml-parser`). Avoid native modules |
-| Tests | Optional but encouraged: Jest (Nest default) + `supertest` for e2e |
+| Tests | Optional but encouraged: Jest unit tests with mocked dependencies. The application itself must still connect to a real database |
 
 No auth, no external queue/cache, no frontend. The service is a single Nest application listening on `PORT` (default `3000`), base path **`/products`** (no global prefix).
 
@@ -78,6 +80,8 @@ How you persist `price` (integer cents, decimal column with transformer, etc.) i
 ## 4. API contract
 
 All responses/timestamps are JSON. Every response body is JSON except `204 No Content`.
+
+The service must also serve **Swagger UI at `http://localhost:3000/docs`** (raw OpenAPI JSON at `/docs-json`), documenting every endpoint below — including request/response schemas, DTO field types and constraints, and the `400`/`404`/`409` responses. Annotate DTOs (e.g. `@ApiProperty`) so the generated schemas are accurate rather than inferred from decorators alone.
 
 | Method | Path | Success | Possible errors |
 |---|---|---|---|
@@ -302,6 +306,7 @@ Expected results with this fixture on an **empty** database:
 ## 5. Validation and errors (DTO first)
 
 - Request bodies and queries are bound to **DTO classes** — no bare interfaces or `any` for input.
+- DTOs carry Swagger annotations (`@ApiProperty`, `@ApiPropertyOptional`) so the published schema matches the validation rules.
 - Register a **global `ValidationPipe`** with at least: `whitelist: true`, `forbidNonWhitelisted: true`, `transform: true`.
 - **Unknown body fields → `400`.** Invalid `sku` format, bad price, wrong types, etc. → `400`.
 - Validation also applies to query parameters on `GET /products` (with explicit type conversion).
@@ -330,16 +335,15 @@ Error status summary:
 
 ## 6. Tests
 
-We strongly encourage adding a few **e2e tests** (Jest + `supertest` is the Nest default) — they are a strong signal of engineering quality. Suggested coverage if you add them:
+We strongly encourage adding **unit tests** — they are a strong signal of engineering quality. **Mock the database layer in unit tests** (a Jest-mocked repository or service dependency); do not spin up an in-memory or real database inside unit tests. This applies to tests only: the application itself must genuinely start up, connect to the real database described in section 2 (the provided Postgres container or SQLite), and persist data — no mocking in application code. If you write import tests, stub the repository's return values to simulate created/updated/failed outcomes rather than hitting a DB. Suggested coverage:
 
-1. CRUD happy path: create → get by id → list → patch → delete → get returns `404`.
-2. `400` on invalid create body (e.g. negative price) **and** `400` on an unknown field.
-3. `400` on invalid list query (e.g. `limit=500`).
-4. `404` on unknown id.
-5. `409` on duplicate `sku` (create, and patch-into-collision).
-6. Import: running the fixture file yields exactly `created: 7, updated: 1, failed: 3` with error indices `[8, 9, 10]`; a malformed-XML upload yields `400`.
+1. Create: valid input is persisted and the mapped result returned; duplicate `sku` → `ConflictException`.
+2. Get by id / update / delete: unknown id → `NotFoundException`; update applies only the supplied fields.
+3. Update: changing `sku` into an existing one → `ConflictException`.
+4. List: pagination/filter arguments are passed through to the repository, and the response envelope (`meta.total`, `meta.totalPages`) is built correctly from stubbed results.
+5. Import: parses the provided fixture, skips invalid rows with their 1-based indices, treats a repeated SKU as an update, and returns the correct created/updated/failed counts; malformed XML → `BadRequestException`.
 
-If you include tests, use an **isolated database** (in-memory SQLite, temp file, or a separate test DB) so they never depend on or corrupt local dev data, and document the command in the README.
+Document the test command in the README.
 
 ---
 
@@ -351,7 +355,7 @@ A reviewer must be able to go from **clone → running → verified** without as
 2. **How to start** — install command, configuration (env vars table with defaults, plus a committed `.env.example` if any env vars exist), dev command, production build + start command, expected port and a sample successful startup log line.
 3. **Database** — how to start it (e.g. `docker compose up -d`), where data is stored, how to reset it, how to inspect it if useful.
 4. **Project layout** — a directory tree with a one-line purpose for each meaningful folder/file, plus 2–3 sentences on the request flow (e.g. controller → service → repository).
-5. **How to access / check the project** — endpoint table, request/response examples, and ready-to-paste `curl` commands for each endpoint, including the multipart import command.
+5. **How to access / check the project** — Swagger UI URL, endpoint table, request/response examples, and ready-to-paste `curl` commands for each endpoint, including the multipart import command.
 6. **Validation and error format** — brief summary of what returns `400`/`404`/`409`.
 7. **Tests (if included)** — command(s) to run and what is covered.
 8. **Assumptions and trade-offs** — design decisions you made and their rationale.
@@ -368,11 +372,12 @@ Also commit a `.gitignore` that excludes `node_modules/`, build output, local DB
 | Validation & DTO discipline | Typed DTOs, no `any` inputs, global pipe configured, query binding done properly |
 | Import robustness | Well-formed parsing, per-row isolation of failures, correct upsert and counts |
 | Error handling | Consistent, predictable statuses; no stack traces or 500s for client errors |
-| Tests | Included tests are meaningful, isolated, and deterministic (a strong plus, not required) |
+| API documentation | Swagger UI reachable at `/docs`, listing every endpoint, DTO schemas, and error responses |
+| Tests | Unit tests mock the database layer and cover service logic (a strong plus, not required) |
 | README | Complete, accurate, runnable; explains layout and how to verify |
 | Code quality | NestJS conventions, sensible layering, naming, no dead code |
 
-Bonus points (optional, only if the core is done): `status`/price-range filters, sorting, Swagger/OpenAPI docs, mapping row-level validation errors back to DTO constraint names.
+Bonus points (optional, only if the core is done): `status`/price-range filters, sorting, mapping row-level validation errors back to DTO constraint names.
 
 ---
 
