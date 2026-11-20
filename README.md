@@ -37,7 +37,7 @@ Commit your finished service to this repo. **You must provide your own `README.m
 | DTO validation | `class-validator` + `class-transformer` |
 | API docs | **Swagger UI** at `/docs` via `@nestjs/swagger`, with the OpenAPI JSON at `/docs-json` |
 | XML parsing | Any pure-JS parser (e.g. `fast-xml-parser`). Avoid native modules |
-| Tests | Optional but encouraged: Jest unit tests with mocked dependencies. The application itself must still connect to a real database |
+| Tests | Strongly recommended: Jest unit tests with mocked dependencies. The application itself must still connect to a real database |
 
 No auth, no external queue/cache, no frontend. The service is a single Nest application listening on `PORT` (default `3000`), base path **`/products`** (no global prefix).
 
@@ -335,7 +335,7 @@ Error status summary:
 
 ## 6. Tests
 
-We strongly encourage adding **unit tests** — they are a strong signal of engineering quality. **Mock the database layer in unit tests** (a Jest-mocked repository or service dependency); do not spin up an in-memory or real database inside unit tests. This applies to tests only: the application itself must genuinely start up, connect to the real database described in section 2 (the provided Postgres container or SQLite), and persist data — no mocking in application code. If you write import tests, stub the repository's return values to simulate created/updated/failed outcomes rather than hitting a DB. Suggested coverage:
+We strongly recommend adding **unit tests** — they are a strong signal of engineering quality. **Mock the database layer in unit tests** (a Jest-mocked repository or service dependency); do not spin up an in-memory or real database inside unit tests. This applies to tests only: the application itself must genuinely start up, connect to the real database described in section 2 (the provided Postgres container or SQLite), and persist data — no mocking in application code. If you write import tests, stub the repository's return values to simulate created/updated/failed outcomes rather than hitting a DB. Suggested coverage:
 
 1. Create: valid input is persisted and the mapped result returned; duplicate `sku` → `ConflictException`.
 2. Get by id / update / delete: unknown id → `NotFoundException`; update applies only the supplied fields.
@@ -347,7 +347,7 @@ Document the test command in the README.
 
 ---
 
-## 7. README.md requirements (mandatory)
+## 7. README.md requirements
 
 A reviewer must be able to go from **clone → running → verified** without asking questions. Your `README.md` must include:
 
@@ -357,7 +357,7 @@ A reviewer must be able to go from **clone → running → verified** without as
 4. **Project layout** — a directory tree with a one-line purpose for each meaningful folder/file, plus 2–3 sentences on the request flow (e.g. controller → service → repository).
 5. **How to access / check the project** — Swagger UI URL, endpoint table, request/response examples, and ready-to-paste `curl` commands for each endpoint, including the multipart import command.
 6. **Validation and error format** — brief summary of what returns `400`/`404`/`409`.
-7. **Tests (if included)** — command(s) to run and what is covered.
+7. **Tests** — command(s) to run and what is covered.
 8. **Assumptions and trade-offs** — design decisions you made and their rationale.
 
 Also commit a `.gitignore` that excludes `node_modules/`, build output, local DB files, and `.env`.
@@ -373,7 +373,7 @@ Also commit a `.gitignore` that excludes `node_modules/`, build output, local DB
 | Import robustness | Well-formed parsing, per-row isolation of failures, correct upsert and counts |
 | Error handling | Consistent, predictable statuses; no stack traces or 500s for client errors |
 | API documentation | Swagger UI reachable at `/docs`, listing every endpoint, DTO schemas, and error responses |
-| Tests | Unit tests mock the database layer and cover service logic (a strong plus, not required) |
+| Tests | Unit tests mock the database layer and cover service logic (strongly recommended) |
 | README | Complete, accurate, runnable; explains layout and how to verify |
 | Code quality | NestJS conventions, sensible layering, naming, no dead code |
 
