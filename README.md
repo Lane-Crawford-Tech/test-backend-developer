@@ -31,7 +31,7 @@ Commit your finished service to this repo. **You must provide your own `README.m
 
 | Concern | Requirement |
 |---|---|
-| Runtime | Node.js **>= 20 LTS** (pin the version you used, e.g. `.nvmrc`) |
+| Runtime | Node.js **>= 24 LTS** (pin the version you used, e.g. `.nvmrc`) |
 | Framework | **NestJS** (latest stable) |
 | Persistence | An ORM/ODM. **Postgres + TypeORM is recommended** — a `docker-compose.yml` is provided so the database starts with one command. **SQLite** (file-based, zero setup) is also acceptable. Prisma, MikroORM, or Mongoose + MongoDB are acceptable **only if** startup stays a documented one-command setup |
 | DTO validation | `class-validator` + `class-transformer` |
